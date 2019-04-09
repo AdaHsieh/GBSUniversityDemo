@@ -1,0 +1,14 @@
+#spring:
+#  application:
+#    name: fpn-channel
+#  profiles:
+#    active: dev
+#  cloud: 
+#    config:
+      #discovery:
+      #  enabled: true 
+      # serviceId: config-server # Discovery Client By Eureka
+#      uri: ${config.server:http://127.0.0.1:8762}
+#eureka:
+#  instance:
+#    hostname: ${eureka.server.address:localhost}
