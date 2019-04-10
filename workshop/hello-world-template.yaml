@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: hello-world-template
+  xpaas: 1.4.0
+message: A new java application has been created in your project.
+metadata:
+  annotations:
+    description: hello world
+    iconClass: icon-spring
+    openshift.io/display-name: Hello World Template
+    tags: java,xpaas
+    version: 1.1.0
+  creationTimestamp: null
+  name: hello-world
+objects:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: ${APP_NAME}
+  spec:
+    dockerImageRepository: 172.30.1.1:5000/myproject/${APP_NAME}
+    lookupPolicy:
+      local: false
+    tags:
+    - items:
+      tag: latest
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      application: ${APP_NAME}
+    name: ${APP_NAME}
+  spec:
+    output:
+      to:
+        kind: "ImageStreamTag"
+        name: ${APP_NAME}:${APP_TAG}
+    ## BINARY BUILD
+    source:
+      type: Binary
+    strategy:
+      sourceStrategy:
+        env:
+        - name: JAVA_OPTIONS
+          value: ${JAVA_OPTIONS}
+        forcePull: true
+        from:
+          kind: ImageStreamTag
+          name: openjdk18-openshift:latest
+          namespace: myproject
+##    type: Source
+    triggers:
+    - imageChange: {}
+      type: ImageChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      application: ${APP_NAME}
+    name: ${APP_NAME}
+  spec:
+    replicas: 1
+    selector:
+      deploymentConfig: ${APP_NAME}
+## ROLLING DEPLOY
+    strategy:
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          application: ${APP_NAME}
+          deploymentConfig: ${APP_NAME}
+        name: ${APP_NAME}
+      spec:
+        containers:
+        - env:
+            - name: LANG
+              value: en_US.UTF-8
+          image: ${APP_NAME}
+          imagePullPolicy: Always
+          name: ${APP_NAME}
+        terminationGracePeriodSeconds: 75
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${APP_NAME}
+        from:
+          kind: ImageStreamTag
+          name: ${APP_NAME}:${APP_TAG}
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: The application's http port.
+    labels:
+      application: ${APP_NAME}
+    name: ${APP_NAME}
+  spec:
+    ports:
+    - port: 8080
+      targetPort: 8080
+    selector:
+      deploymentConfig: ${APP_NAME}
+- apiVersion: v1
+  id: ${APP_NAME}-route
+  kind: Route
+  metadata:
+    annotations:
+      description: Route for application's http service.
+    labels:
+      application: ${APP_NAME}
+    name: ${APP_NAME}
+  spec:
+    host: ${HOSTNAME_HTTP}
+    to:
+      name: ${APP_NAME}
+parameters:
+- description: The name for the application.
+  displayName: Application Name
+  name: APP_NAME
+  required: true
+  value: hello-world
+- description: The tag name for the application.
+  displayName: Application Tag Name
+  name: APP_TAG
+  required: true
+  value: latest
+## OpenJDK BUILD ENV
+- description: <BUILD> JAVA options
+  displayName: <BUILD> JAVA OPTION
+  name: JAVA_OPTIONS
+  value: -Dspring.config.location=file:/config/,classpath:/
+## OpenJDK DEPLOY ENV
+- description: 'Custom hostname for http service route.  Leave blank for default hostname,
+    e.g.: <application-name>-<project>.<default-domain-suffix>'
+  displayName: Custom http Route Hostname
+  name: HOSTNAME_HTTP

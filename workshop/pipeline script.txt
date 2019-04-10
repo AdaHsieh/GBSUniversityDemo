@@ -1,0 +1,31 @@
+#!groovy
+// Run this node on a Maven Slave
+// Maven Slaves have JDK and Maven already installed
+try {
+    node() {
+        // def path = tool name: 'Gradle47', type: 'gradle'
+
+        stage('Checkout Source from GIT') {
+            git([branch: 'master', credentialsId: '52b5ed1e-e5fe-4ffe-9ff2-484913dbfc80', url: "https://github.com/jesseko0820/GBSUniversityDemo.git"])
+        }
+
+        stage('Build Jar') {
+            echo "Build Jar !!"
+
+            sh 'gradle clean'
+            sh 'gradle -b build.gradle buildDemo bootJar -x test'
+            // tool name: 'Gradle47', type: 'gradle'
+            // sh 'gradle --version'
+        }
+
+        stage('Deploy to minishift') {
+            sh "oc login 192.168.43.105:8443 --insecure-skip-tls-verify=true -u developer -p developer --config config/minishift_kubeconfig"
+            sh "oc start-build hello-world --from-file=build/libs/HelloWorld-0.0.1-SNAPSHOT.jar --config config/minishift_kubeconfig"
+        }
+    }
+} catch (err) {
+   echo "in catch block"
+   echo "Caught: ${err}"
+   currentBuild.result = 'FAILURE'
+   throw err
+}   
