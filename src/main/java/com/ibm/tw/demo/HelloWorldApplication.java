@@ -13,7 +13,7 @@ public class HelloWorldApplication {
 
 	@RequestMapping(value = "/hello", method = RequestMethod.GET)
 	public String hello() {
-		return "Hello World ! Jesse ";
+		return "Hello World ! Hong ";
 	}
 
 	public static void main(String[] args) {
